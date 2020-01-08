@@ -1,52 +1,14 @@
-import keshimasu as ksms
 import numpy as np
 import signal
 import pickle
 from math import floor
 from myerrors import *
 
-#
-# グローバル定数
-#
-
-TIME_LIMIT = 100  # 制限時間
-HEI = 4           # 画面に表示する高さ
-
-#
-# テスト用問題
-#
-
-test1_author = "satomi"
-test1_tag = "test1"
-test1_theme = "読みがひらがな３文字の漢字"
-test1_question = [['御', '神', '酒', '洋'],
-                  ['渾', '名', '息', '墨'],
-                  ['意', '稲', '吹', '何'],
-                  ['気', '桜', '荷', '処'],
-                  ['地', '深', '合', '扉'],
-                  ['大', '人', '傷', '図']]
-test1_answers = {'大人': {'おとな'}, '桜': {'さくら'}, '深傷': {'ふかで'},
-                 '傷': {'しょう'}, '意気地': {'いくじ', 'いきじ'}, '意': {'こころ'},
-                 '地': {'ところ'}, '合図': {'あいず'}, '扉': {'とびら'},
-                 '稲荷': {'いなり'}, '息吹': {'いぶき'}, '渾名': {'あだな'},
-                 '名': {'みょう'}, '御神酒': {'おみき'}, '洋墨': {'いんく'},
-                 '何処': {'いずこ', 'いずく', 'いづく', 'いずく', 'いどこ'},
-                 '地名': {'ちめい'}}
-
-test2_author = "satomi"
-test2_tag = "test2"
-test2_theme = "読みがひらがな3文字の漢字"
-test2_question = [['海', '案', '山', '麒'],
-                  ['星', '萄', '酒', '麟'],
-                  ['葡', '冬', '至', '子'],
-                  ['印', '絵', '達', '磨'],
-                  ['度', '族', '蜜', '柑'],
-                  ['家', '暦', '文', '字']]
-test2_answers = {'暦': {'こよみ', 'りゃく'}, '字': {'あざな'}, '家族': {'かぞく'},
-                 '印度': {'いんど'}, '印': {'しるし'}, '度': {'めもり'}, '蜜柑': {'みかん'},
-                 '達磨': {'だるま'}, '絵文字': {'えもじ'}, '葡萄': {'ぶどう'},
-                 '葡萄酒': {'わいん'}, '海星': {'ひとで'}, '案山子': {'かかし'}, '案': {'つくえ'},
-                 '子': {'おとこ'}, '麒麟': {'きりん'}}
+"""
+----update-----
+> 'あとnマス'の表示
+> マス指定を2整数(1文字は1整数)で入力できるように変更する
+"""
 
 
 #
@@ -58,23 +20,23 @@ def question_list():
 
     # binファイルの読み込み
     with open('questions_data.bin', 'rb') as f:
-        questions = pickle.load(f)
+        keshimasu_list = pickle.load(f)
 
     # 表示を揃えるために文字列の最大長を調べる
     max_author_len = 0
     max_tag_len = 0
-    for q in questions:
-        max_author_len = max(max_author_len, len(q['author']))
-        max_tag_len = max(max_tag_len, len(q['tag']))
+    for k in keshimasu_list:
+        max_author_len = max(max_author_len, len(k.author))
+        max_tag_len = max(max_tag_len, len(k.tag))
 
     # 一覧表示
     print('author'.center(max_author_len), 'tag'.center(max_tag_len))
     print(''.rjust(max_author_len, '-'), ''.rjust(max_tag_len, '-'))
-    for q in questions:
-        print(q['author'].rjust(max_author_len), q['tag'].rjust(max_tag_len))
+    for k in keshimasu_list:
+        print(k.author.rjust(max_author_len), k.tag.rjust(max_tag_len))
     print()  # 改行
 
-
+'''
 def resister_question(keshimasu: ksms.Keshimasu):
     """新しい消しマス問題を問題集ファイルへ登録"""
 
@@ -106,8 +68,9 @@ def resister_question(keshimasu: ksms.Keshimasu):
         # binファイルへの書き込み
         with open('questions_data.bin', 'wb') as f:
             pickle.dump(questions, f)
+'''
 
-
+'''
 def update_question(keshimasu: ksms.Keshimasu):
     """すでに登録されている同じ(author, tag)の問題を登録し直す"""
     author = keshimasu.author
@@ -119,10 +82,10 @@ def update_question(keshimasu: ksms.Keshimasu):
     try:
         # binファイルの読み込み
         with open('questions_data.bin', 'rb') as f:
-            questions = pickle.load(f)
+            keshimasu_list = pickle.load(f)
 
         # 問題集の(作者, タグ)リスト
-        author_tags = [(q['author'], q['tag']) for q in questions]
+        author_tags = [(q['author'], q['tag']) for q in keshimasu_list]
 
         # 同じ(author, tag)の問題を探す
         if (author, tag) in author_tags:
@@ -137,6 +100,7 @@ def update_question(keshimasu: ksms.Keshimasu):
 
     except FileNotFoundError:
         print("questions_data.bin が開けません.")
+'''
 
 
 def play():
@@ -154,18 +118,15 @@ def play():
 
             # ファイルを開く
             with open('questions_data.bin', 'rb') as f:
-                questions = pickle.load(f)
+                keshimasu_list = pickle.load(f)
 
             # 問題集の(作者, タグ)リスト
-            author_tags = [(q['author'], q['tag']) for q in questions]
+            author_tags = [(k.author, k.tag) for k in keshimasu_list]
 
             if inputs in author_tags:
-                # 該当問題がリストにある場合 -> 該当問題が何問目かを検索
+                # 該当問題がリストにある場合 -> 該当問題が何問目かを検索し取得
                 idx = author_tags.index(inputs)
-                keshimasu = ksms.Keshimasu()
-                keshimasu.set_question(questions[idx]['question'])
-                keshimasu.set_answers(questions[idx]['answer'])
-                keshimasu.set_theme(questions[idx]['theme'])
+                keshimasu = keshimasu_list[idx]
                 print("問題を読み込みました.")
                 break
             else:
@@ -173,17 +134,39 @@ def play():
         except InputError as e:
             print(e)
 
-    # お題の表示
+    ################
+    # ゲーム開始準備 #
+    ################
+
+    #
+    # よく使う変数のリネーム
+    #
+
+    hei = keshimasu.hei        # 盤面を表示する高さ
+    tate = keshimasu.shape[0]  # 盤面の縦の長さ
+    yoko = keshimasu.shape[1]  # 盤面の横の長さ
+
+    #
+    # コマンドライン表示
+    #
+
     print("お題: " + keshimasu.theme)
     # 盤面の表示 番号付き
     keshimasu.display(number_is=True)
 
     input("エンターキーを押すと始まります.")
+    print("制限時間は " + str(keshimasu.time) + "s です")
 
+    #
     # タイマーの設定
+    #
+
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.setitimer(signal.ITIMER_REAL, TIME_LIMIT)  # 100秒後に例外を起こす
-    print("制限時間は " + str(TIME_LIMIT) + "s です")
+    signal.setitimer(signal.ITIMER_REAL, keshimasu.time)  # 100秒後に例外を起こす
+
+    #############
+    # ゲーム開始 #
+    #############
 
     try:
         # 1ターンの処理
@@ -199,8 +182,8 @@ def play():
                     in_num = [int(e) for e in input_str]
 
                     # 有効な選択か否かのチェック
-                    if not np.all(0 < np.all(np.array(in_num) < HEI*keshimasu.shape[1])):
-                        raise InputError(f"0から{HEI*keshimasu.shape[1]-1}の数値を入力してください.")
+                    if not np.all(0 < np.all(np.array(in_num) < hei*yoko)):
+                        raise InputError(f"0から{hei*yoko-1}の数値を入力してください.")
 
                     # 選択が2つ以上の場合更に間隔をチェック
                     if len(in_num) > 1:
@@ -210,7 +193,7 @@ def play():
                             check_list = np.append(check_list, in_num[i+1]-in_num[i])
 
                         # 横: 間隔がすべて1 縦: 間隔がすべて横幅
-                        if np.all(check_list == 1) or np.all(check_list == keshimasu.shape[1]):
+                        if np.all(check_list == 1) or np.all(check_list == yoko):
                             break
 
                         # ここを通る場合, 入力が不適
@@ -223,8 +206,7 @@ def play():
                     print(e)
 
             # 選択した番号をnumpy式のindexに変換
-            in_num_f = (np.array(in_num)//keshimasu.shape[1]+keshimasu.shape[0]-HEI,
-                        np.array(in_num)%keshimasu.shape[1])
+            in_num_f = (np.array(in_num)//yoko + tate - hei, np.array(in_num) % yoko)
 
             # 選択した番号から熟語を構成
             choice = keshimasu.construct_word(in_num_f)

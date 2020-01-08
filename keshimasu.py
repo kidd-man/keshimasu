@@ -1,7 +1,6 @@
 import numpy as np
-
-# 画面として表示される制限高さ(下から)
-HEI = 4
+import pickle
+from myerrors import *
 
 
 class KeshimasuError(Exception):
@@ -11,24 +10,29 @@ class KeshimasuError(Exception):
 
 class Keshimasu:
     """ひとつの問題に対応するクラス"""
-    def __init__(self, search_word=('noname', 'notag')):
-        self.question_table = np.array([])  # 盤面
-        self.playing_table = np.array([])  # 動かす用の盤面
-        self.shape = None  # 消しマスの大きさ
-        self.answer_set = dict()  # 答えの集合
-        self.author = search_word[0]  # 作者
-        self.tag = search_word[1]  # 問題につけるタグ
-        self.theme = ''  # 問題のテーマ
+    def __init__(self, ques: np.array, ans, author: str, tag: str,
+                 theme='かな３文字で漢字を読め', lang='hiragana', height=4, time=100):
+        self.question_table = ques  # 盤面
+        self.playing_table = ques   # 動かす用の盤面
+        self.shape = ques.shape     # 消しマスの大きさ
+        self.answer_set = ans       # 答えの集合
+        self.author = author        # 作者
+        self.tag = tag              # 問題につけるタグ
+        self.theme = theme          # 問題のテーマ
+        self.keybord = lang         # 入力キーボードの言語
+        self.hei = height           # 表示盤面の高さ
+        self.time = time            # 制限時間
 
-    def set_question(self, arr: list):
-        self.question_table = np.array(arr)
-        self.playing_table = np.array(arr)
+    '''
+    def set_question(self, arr: np.array):
+        self.question_table = arr
+        self.playing_table = arr
         self.shape = self.question_table.shape
 
     def set_answers(self, answers: dict):
         self.answer_set = answers
 
-    def set_author(self):
+    def set_author(self, ):
         pass
 
     def set_tag(self):
@@ -36,6 +40,7 @@ class Keshimasu:
 
     def set_theme(self, theme: str):
         self.theme = theme
+    '''
 
     def construct_word(self, idxs: np.array):
         """indexから, playing_table を参照して熟語を構成する"""
@@ -78,11 +83,13 @@ class Keshimasu:
                     self.playing_table[r][clm] = '　'  # 全角スペース
 
     def choice_to_coordinate(self, num):
-        """ユーザーが指定する数字から盤面行列を扱う際の座標への変換"""
-        return num // self.shape[1] + self.shape[0] - HEI, num % self.shape[1]
+        """ユーザーが指定する数字を引数に取り,
+           盤面行列を扱う際の座標への変換を行う"""
+        return num // self.shape[1] + self.shape[0] - self.hei, num % self.shape[1]
 
-    def check_answer(self, choice, in_ans: str):  # choice は入力数値配列でもそれに対応する熟語文字列でも良い
-        """選択したマスに対する入力が正解リストに含まれるかチェックし真偽値を返す"""
+    def check_answer(self, choice, in_ans: str):
+        """選択したマスに対する入力が正解リストに含まれるかチェックし真偽値を返す.
+           choice は入力数値配列でもそれに対応する熟語文字列でも良い."""
         try:
             if type(choice) is list:
                 choice_word = self.construct_word(choice)
@@ -99,35 +106,63 @@ class Keshimasu:
         except TypeError:
             pass
 
-    def save(self):
-        pass
-
-    def display(self, number_is=False):
-        """コマンドラインにプレイングテーブルを表示する
-           ただし縦は下から4行までしか表示しない"""
+    def save(self, overwrite=False):
+        """消しマスの問題(このクラスのオブジェクト)を外部ファイルに保存する.
+           overwriteがFalseのとき,
+           同じ(author, tag)の問題がすでに存在している場合は警告し、保存しない."""
         try:
-            # set_problemしていない場合の例外処理
-            if self.shape is None:
-                raise KeshimasuError("問題が設定されていません. set_question で問題を設定してください.")
+            try:
+                # binファイルの読み込み
+                with open('questions_data.bin', 'rb') as f:
+                    keshimasus = pickle.load(f)
+            except FileNotFoundError:
+                # ファイルが見つからなければ新規作成
+                keshimasus = []
 
-            # number_format は '{0} {1} {2} {3}' のような文字列
-            # マスを指定する際の数字を表示するために用いる
-            number_format = ' '.join(list(map(lambda x: '{0[' + str(x) + ']:>2}', list(range(self.shape[1])))))
+            # 問題集内の問題の(author, tag)のリスト
+            author_tags = [(k.author, k.tag) for k in keshimasus]
 
-            print("---"*self.shape[1]*2)  # 罫線
+            # すでに同じ(author, tag)で登録されたものがないか確認
+            if (self.author, self.tag) in author_tags:
+                # 同じものがある場合
+                if overwrite:
+                    # 上書き保存がTrueなら削除
+                    del keshimasus[author_tags.index((self.author, self.tag))]
 
-            # 問題の描画
-            for i, e in enumerate(self.playing_table[-HEI:]):
-                print(*e, end='')
-
-                # 番号対応表の描画
-                if number_is:
-                    print('  ', number_format.format(range(i*self.shape[1], (i+1)*self.shape[1])))
                 else:
-                    print()
+                    # 上書き保存がTrueなら重複不可なのでエラー
+                    raise SaveDuplicationError\
+                    (f'author: {self.author}, tag: {self.tag} の問題はすでに登録されています.')
 
-            print("---"*self.shape[1]*2)  # 罫線
+            # 問題リストへこのインスタンスを追加
+            keshimasus.append(self)
 
-        except KeshimasuError as e:
+            # binファイルへの書き込み
+            with open('questions_data.bin', 'wb') as f:
+                pickle.dump(keshimasus, f)
+
+        except FileNotFoundError as e:
+            print(e)
+        except SaveDuplicationError as e:
             print(e)
 
+    def display(self, number_is=False):
+        """コマンドラインにプレイングテーブルを表示する.
+           ただし縦は下からHEI行までしか表示しない."""
+        # number_format は '{0} {1} {2} {3}' のような文字列
+        # マスを指定する際の数字を表示するために用いる
+        number_format = ' '.join(list(map(lambda x: '{0[' + str(x) + ']:>2}', list(range(self.shape[1])))))
+
+        print("---"*self.shape[1]*2)  # 罫線
+
+        # 問題の描画
+        for i, e in enumerate(self.playing_table[-self.hei:]):
+            print(*e, end='')
+
+            # 番号対応表の描画
+            if number_is:
+                print('  ', number_format.format(range(i*self.shape[1], (i+1)*self.shape[1])))
+            else:
+                print()
+
+        print("---"*self.shape[1]*2)  # 罫線

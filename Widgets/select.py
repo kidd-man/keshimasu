@@ -1,61 +1,50 @@
 import tkinter as tk
 import pickle as pk
-import numpy as np
-import keshimasu as ksms
-
-HEI = 4
+import Widgets.play as play
 
 
-class QList(tk.Frame):
-    def __init__(self, master: tk.Tk):
-        super().__init__(master, width=500, height=200)
+class SelectFrame(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
 
-        # 問題集の読み込み
-        with open('../questions_data.bin', 'rb') as f:
-            questions = pk.load(f)
+        # 問題ファイルの読み込み
+        with open('questions_data.bin', 'rb') as f:
+            self.k_list = pk.load(f)
 
-        brd_list = []  # 盤面形表示のリスト
-        frm_list = []  # 枠のリスト
-        thm_list = []  # テーマのリスト
-        aut_list = []  # 作者のリスト
-        tag_list = []  # 問題タグのリスト
+    def open_window(self):
+        # 問題選択用テーブルの作成
+        table = [['盤面形', 'テーマ', '作者', '問題タグ']]
 
-        # スクロールバー用のキャンバス
-        cvs = tk.Canvas(self)
+        for k in self.k_list:
+            table.append([f'{k.shape[0]}x{k.shape[1]}', k.theme, k.author, k.tag])
 
-        # スクロールバーの作成と配置
-        bar = tk.Scrollbar(self, orient=tk.VERTICAL)
-        bar.pack(side=tk.RIGHT, fill=tk.Y)
-        bar.config(command=cvs.yview)
+        # 選択用リストの作成
+        for row_idx, row_dat in enumerate(table):
+            for col_idx, col_dat in enumerate(row_dat):
+                if row_idx == 0:
+                    bg_color = '#ccc'
+                else:
+                    bg_color = '#fff'
 
-        cvs.config(yscrollcommand=bar.set)
-        cvs.config(scrollregion=(0, 0, 500, 500))
-        cvs.pack()
+                lbl = tk.Label(self, bg=bg_color, borderwidth=1, relief=tk.RAISED, text=col_dat)
+                lbl.grid(row=row_idx, column=col_idx, sticky=tk.N + tk.E + tk.S + tk.W)
 
-        # 問題ごとに見出しを作成
-        for i, q in enumerate(questions):
-            # 盤面の形
-            shape = np.array(q['question']).shape
+            # 選択ボタンを配置
+            if row_idx > 0:
+                keshimasu = self.k_list[row_idx-1]
+                btn = tk.Button(self, text='try', command=self.open_play_window(keshimasu))
+                btn.grid(row=row_idx, column=4)
 
-            # テーブルをテキスト化
-            tbl_txt = '\n'.join([' '.join(i) for i in [['□']*shape[1]]*(shape[0]-HEI) + [['■']*shape[1]]*HEI])
-            frm_list.append(tk.LabelFrame(cvs))
-            brd_list.append(tk.Label(frm_list[i], text=tbl_txt))
-            thm_list.append(tk.Label(frm_list[i], text="テーマ: " + q['theme']))
-            aut_list.append(tk.Label(frm_list[i], text="作者: " + q['author']))
-            tag_list.append(tk.Label(frm_list[i], text="問題タグ: " + q['tag']))
+    def open_play_window(self, keshimasu):
+        def x():
+            """問題選択ウインドウを閉じてプレイ画面を開く"""
+            # 選択ウインドウの削除
+            self.master.destroy()
 
-            # 配置
-            frm_list[i].propagate(False)  # 自動サイズ変更を無効
-            frm_list[i].grid(row=i, column=0)
-            brd_list[i].grid(row=0, column=0, rowspan=3)
-            thm_list[i].grid(row=0, column=1, sticky=tk.W)
-            aut_list[i].grid(row=1, column=1, sticky=tk.W)
-            tag_list[i].grid(row=2, column=1, sticky=tk.W)
-
-
-root = tk.Tk()
-root.geometry('400x200')
-f = QList(master=root)
-# root.pack()
-root.mainloop()
+            playroot = tk.Tk()
+            playroot.title('消しマス')
+            pf = play.PlayFrame(keshimasu, master=playroot)
+            pf.pack()
+            pf.mainloop()
+        return x

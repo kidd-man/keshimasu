@@ -13,6 +13,11 @@ class InputError(Exception):
     pass
 
 
+class SaveDuplicationError(Exception):
+    """問題の保存が重複しているエラーの例外クラス"""
+    pass
+
+
 def signal_handler(signum, frame):
     """時間制限で用いる signalの受信時に実行するハンドラ"""
     raise TimeUpException("時間切れです.")

@@ -5,50 +5,47 @@ import threading as th
 import keshimasu as ksms
 from myerrors import *
 
-#
-# テスト用問題
-#
+#######
+# 定数 #
+#######
 
-test1_author = "satomi"
-test1_tag = "test1"
-test1_theme = "読みがひらがな３文字の漢字"
-test1_question = [['御', '神', '酒', '洋'],
-                  ['渾', '名', '息', '墨'],
-                  ['意', '稲', '吹', '何'],
-                  ['気', '桜', '荷', '処'],
-                  ['地', '深', '合', '扉'],
-                  ['大', '人', '傷', '図']]
-test1_answers = {'大人': {'おとな'}, '桜': {'さくら'}, '深傷': {'ふかで'},
-                 '傷': {'しょう'}, '意気地': {'いくじ', 'いきじ'}, '意': {'こころ'},
-                 '地': {'ところ'}, '合図': {'あいず'}, '扉': {'とびら'},
-                 '稲荷': {'いなり'}, '息吹': {'いぶき'}, '渾名': {'あだな'},
-                 '名': {'みょう'}, '御神酒': {'おみき'}, '洋墨': {'いんく'},
-                 '何処': {'いずこ', 'いずく', 'いづく', 'いずく', 'いどこ'},
-                 '地名': {'ちめい'}}
-
-kesimasu1 = ksms.Keshimasu()
-kesimasu1.set_question(test1_question)
-kesimasu1.set_answers(test1_answers)
-kesimasu1.set_theme(test1_theme)
-
-TIME_LIMIT = 200  # 制限時間
-SIZ = 100  # 1マスの大きさ
-DISP_ROW = 4    # 画面に表示する高さ
-REMAIN_HEI = SIZ*2//5  # 残りマスの表示の高さ
-YOKO_WID = SIZ//2  # 盤面横の幅
-TXT_MAX = 8  # 入力文字数上限
+# TIME_LIMIT = 200  # 制限時間
+B_WID = 400  # ボードの横の大きさ
+# SIZ = 100  # 1マスの大きさ
+UPPER_HEI = B_WID//10  # 残りマスの表示の高さ
+SIDE_WID = B_WID//40  # 盤面横の幅
+TXT_MAX = 12  # 入力文字数上限
 FRM_WID = 5  # 枠の太さ
 
-KANA = ['あぁ', 'いぃ', 'うぅ', 'えぇ', 'おぉ',
-        'かが', 'きぎ', 'くぐ', 'けげ', 'こご',
-        'さざ', 'しじ', 'すず', 'せぜ', 'そぞ',
-        'ただ', 'ちぢ', 'つづっ', 'てで', 'とど',
-        'な', 'に', 'ぬ', 'ね', 'の',
-        'はばぱ', 'ひびぴ', 'ふぶぷ', 'へべぺ', 'ほぼぽ',
-        'ま', 'み', 'む', 'め', 'も',
-        'やゃ', 'ゆゅ', 'よょ',
-        'ら', 'り', 'る', 'れ', 'ろ',
-        'わゎ', 'を', 'ん']
+#
+# キーボード用のアルファベットリスト
+#
+
+HIRAGANA = [['あぁ', 'いぃ', 'うぅ', 'えぇ', 'おぉ'],
+            ['かが', 'きぎ', 'くぐ', 'けげ', 'こご'],
+            ['さざ', 'しじ', 'すず', 'せぜ', 'そぞ'],
+            ['ただ', 'ちぢ', 'つづっ', 'てで', 'とど'],
+            ['な', 'に', 'ぬ', 'ね', 'の'],
+            ['はばぱ', 'ひびぴ', 'ふぶぷ', 'へべぺ', 'ほぼぽ'],
+            ['ま', 'み', 'む', 'め', 'も'],
+            ['やゃ', 'ゆゅ', 'よょ'],
+            ['ら', 'り', 'る', 'れ', 'ろ'],
+            ['わゎ', 'を', 'ん', 'ー']]
+
+KATAKANA = [['アァ', 'イィ', 'ウゥ', 'エェ', 'オォ'],
+            ['カガ', 'キギ', 'クグ', 'ケゲ', 'コゴ'],
+            ['サザ', 'シジ', 'スズ', 'セゼ', 'ソゾ'],
+            ['タダ', 'チヂ', 'ツヅッ', 'テデ', 'トド'],
+            ['ナ', 'ニ', 'ヌ', 'ネ', 'ノ'],
+            ['ハバパ', 'ヒビピ', 'フブプ', 'ヘベペ', 'ホボポ'],
+            ['マ', 'ミ', 'ム', 'メ', 'モ'],
+            ['ヤャ', 'ユュ', 'ヨョ'],
+            ['ラ', 'リ', 'ル', 'レ', 'ロ'],
+            ['ワヮ', 'ヲ', 'ン', 'ー']]
+
+ALPHABET = [['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            ['Z', 'X', 'C', 'V', 'B', 'N', 'M']]
 
 
 #
@@ -71,17 +68,20 @@ class PlayFrame(tk.Frame):
         super().__init__(master, width=width, height=height)
         # 各初期化
         self.master = master
-        self.remain_time = TIME_LIMIT
+        self.remain_time = keshimasu.time
         self.message = None
         self.clear_flag = False
+        size = B_WID // keshimasu.shape[1]  # 1マスの大きさ
+        disp_hei = keshimasu.hei  # 表示する高さ
 
+        #
         # ウィジェットの作成
+        #
+
         self.ksms = keshimasu
-        self.header = HeaderFrame(TIME_LIMIT, self.ksms, master=self)
-        boad_width = self.ksms.shape[1]*SIZ + YOKO_WID*2
-        boad_height = DISP_ROW*SIZ + REMAIN_HEI
-        self.playboad = MasusFrame(keshimasu, master=self, width=boad_width, height=boad_height)
-        self.keyboad = Keyboad(self, width=600, height=800, submit_func=self.update_playboad)
+        self.header = HeaderFrame(self.remain_time, self.ksms, master=self)
+        self.playboad = MasusFrame(self, keshimasu, size)
+        self.keyboad = Keyboad(self, lang=self.ksms.keybord, width=600, height=800, submit_func=self.update_playboad)
 
         #
         # ゲーム開始を確認するメッセージボックスを表示する
@@ -90,7 +90,7 @@ class PlayFrame(tk.Frame):
         # メインウインドウを非表示
         master.withdraw()
         # メッセージボックスに表示するようの盤面
-        bord = '\n'.join([' '.join(row) for row in self.ksms.playing_table[-DISP_ROW:]])
+        bord = '\n'.join([' '.join(row) for row in self.ksms.playing_table[-disp_hei:]])
         # メッセージボックスの表示
         messagebox.showinfo(title=self.ksms.theme, message=bord)
         # メインウインドウの表示
@@ -164,7 +164,8 @@ class PlayFrame(tk.Frame):
 
 class HeaderFrame(tk.Frame):
     """制限時間とテーマの表示"""
-    def __init__(self, time: int, keshimasu: ksms.Keshimasu, master=None, width=600, height=90):
+    def __init__(self, time: int, keshimasu: ksms.Keshimasu,
+                 master, width=B_WID+2*SIDE_WID, height=90):
         super().__init__(master, width=width, height=height)
         # タイマー表示の作成
         self.timer = tk.Canvas(self, width=120, height=100)
@@ -185,9 +186,7 @@ class HeaderFrame(tk.Frame):
 
 class MasusFrame(tk.Frame):
     """マスの配置画面"""
-    def __init__(self, keshimasu: ksms.Keshimasu, master=None, width=800, height=800):
-        super().__init__(master, width=width, height=height)
-
+    def __init__(self, master, keshimasu: ksms.Keshimasu, size):
         # 問題
         self.ksms = keshimasu
         self.q = self.ksms.playing_table
@@ -196,8 +195,20 @@ class MasusFrame(tk.Frame):
         self.masu_list = []
 
         # 盤面の大きさを取得する
-        self.row = self.ksms.shape[0]
-        self.clm = self.ksms.shape[1]
+        self.row = self.ksms.shape[0]  # 盤面の縦マス数
+        self.clm = self.ksms.shape[1]  # 盤面の横マス数
+        self.hei = self.ksms.hei       # 表示する高さ(マス数)
+        self.size = size               # 1マスの1辺の長さ
+
+        # マスの大きさと周辺枠の太さからフレームの大きさを決定
+        width = self.size*self.clm + SIDE_WID*2
+        height = self.size*self.hei + UPPER_HEI
+
+        # 親クラスの初期化
+        super().__init__(master, width=width, height=height)
+
+        # 残りマス数表示のフォントサイズ
+        self.remain_size = int(20*self.size//100)
 
         # 各マスのスイッチ状態を保持する行列
         self.switches = np.zeros((self.row, self.clm), dtype=bool)
@@ -206,7 +217,10 @@ class MasusFrame(tk.Frame):
         self.choice_word = ''
 
         # 盤面の大きさに応じた大きさのキャンバスを作成
-        self.cvs = tk.Canvas(self, width=SIZ*self.clm+2*YOKO_WID, height=SIZ*DISP_ROW+SIZ*2//5, bg='white')
+        self.cvs = tk.Canvas(self,
+                             width=width,
+                             height=height,
+                             bg='white')
 
         # 画面表示・配置
         self.display(isclear=True)
@@ -227,26 +241,26 @@ class MasusFrame(tk.Frame):
                     m.delete()
             self.masu_list = []
             # 各マスのオブジェクト列を生成
-            for i in range(self.row-DISP_ROW, self.row):
+            for i in range(self.row-self.hei, self.row):
                 for j in range(self.clm):
                     if self.q[i][j] != '　':  # 空白かいなか
                         self.masu_list.append(Masu(self.cvs,
-                                                   x=100*j,
-                                                   y=100*(i - self.row + DISP_ROW)+REMAIN_HEI,
-                                                   size=100,
+                                                   x=self.size*j,
+                                                   y=self.size*(i - self.row + self.hei)+UPPER_HEI,
+                                                   size=self.size,
                                                    text=self.q[i][j]))
                     else:
                         self.masu_list.append(None)
 
         for column in range(self.clm):
             # 残りマス数の計算
-            remain = max(np.sum(self.q[:, column] != '　') - DISP_ROW, 0)
+            remain = max(np.sum(self.q[:, column] != '　') - self.hei, 0)
 
             # 残りマス表示の描画
-            self.cvs.create_text(SIZ*column + SIZ // 2 + YOKO_WID,
-                                 REMAIN_HEI // 2,
-                                 text="残り " + str(remain) + " マス",
-                                 font=('fammily', 20), tag='remain')
+            self.cvs.create_text(self.size*column + self.size // 2 + SIDE_WID,
+                                 UPPER_HEI // 2,
+                                 text="あと " + str(remain) + " マス",
+                                 font=('fammily', self.remain_size), tag='remain')
 
         # 配置
         self.cvs.pack()
@@ -254,16 +268,16 @@ class MasusFrame(tk.Frame):
     def click(self, event):
         """クリック時のマス選択をマスの背景色を変えることで表現する"""
         # マスの左上からの座標
-        x = event.x-YOKO_WID
-        y = event.y-REMAIN_HEI
+        x = event.x-SIDE_WID
+        y = event.y-UPPER_HEI
 
-        if 0 < x < SIZ*self.clm and 0 < y < SIZ*DISP_ROW:
+        if 0 < x < self.size*self.clm and 0 < y < self.size*self.hei:
             # 有効エリアをクリックしてる場合
-            if self.masu_list[y//SIZ*self.clm + x//SIZ] is not None:
+            if self.masu_list[y//self.size*self.clm + x//self.size] is not None:
                 # なおかついずれかのマスをクリックしている場合
                 # クリックされたマスを特定
-                c_row = y // SIZ + self.row - DISP_ROW
-                c_clm = x // SIZ
+                c_row = y // self.size + self.row - self.hei
+                c_clm = x // self.size
                 # クリックされたマスがスイッチ可能マスかどうかを
                 # その時のスイッチ数に応じて調べる
                 swi_num = np.count_nonzero(self.switches)
@@ -313,7 +327,7 @@ class MasusFrame(tk.Frame):
 
                 if switchable:
                     # スイッチ
-                    self.masu_list[y//SIZ*self.clm+c_clm].switch()
+                    self.masu_list[y//self.size*self.clm+c_clm].switch()
 
                     # スイッチ行列の対応する要素を同様に書き換え
                     self.switches[c_row][c_clm] = not self.switches[c_row][c_clm]
@@ -334,17 +348,17 @@ class MasusFrame(tk.Frame):
 
 class Masu:
     """1マスの表現"""
-    def __init__(self, master, x=0, y=0, size=SIZ, text=u'　'):
+    def __init__(self, master, x, y, size, text=u'　'):
         self.master = master
         self.x = x
         self.y = y
 
         # 枠線
-        self.frame_id = self.master.create_rectangle(x+YOKO_WID, y,
-                                                     x+YOKO_WID+size, y+size,
+        self.frame_id = self.master.create_rectangle(x+SIDE_WID, y,
+                                                     x+SIDE_WID+size, y+size,
                                                      width=5)
         # 文字
-        self.text_id = self.master.create_text(x+size//2+YOKO_WID,
+        self.text_id = self.master.create_text(x+size//2+SIDE_WID,
                                                y+size//2,
                                                text=text,
                                                font=('family', size*3//4),
@@ -376,9 +390,9 @@ class Masu:
 
     # 枠の描画
     def draw_frame(self, color):
-        self.frame_id = self.master.create_rectangle(self.x + YOKO_WID, self.y,
-                                                     self.x + YOKO_WID + self.size, self.y + self.size,
-                                                     width=5,
+        self.frame_id = self.master.create_rectangle(self.x + SIDE_WID, self.y,
+                                                     self.x + SIDE_WID + self.size, self.y + self.size,
+                                                     width=FRM_WID,
                                                      fill=color,
                                                      tag='frame')
 
@@ -390,75 +404,109 @@ class Masu:
 
 
 class Keyboad(tk.Frame):
-    """回答に用いるキーボード"""
-    def __init__(self, master=None, width=600, height=400, submit_func=None):
+    """回答に用いるキーボード langでひらがな・カタカナ・アルファベットを指定"""
+    def __init__(self, master=None, lang='hiragana', width=600, height=400, submit_func=None):
         #
         # ウィジェット定義
         #
 
         # 親の初期化処理
         super().__init__(master, width=width, height=height)
+
         # 入力表示
         self.txt = tk.StringVar()
         labelframe = tk.LabelFrame(self)
         self.label = tk.Label(labelframe, width=int(TXT_MAX*1.5), textvariable=self.txt, font=('family', 30))
-        # 五十音ボタン
-        self.buttons = [tk.Button(self, text=e[0], font=('fammily', 15), command=self.push_kana(e[0]), width=3)
-                        for e in KANA]
+        # 変換処理用の内部保持入力文字リスト
+        self.inputted = []
+        # ひらがな・カタカナ・アルファベットのどれか
+        self.lang = 'hiragana'
+
+        # アルファベット入力ボタンの作成
+        if lang == 'hiragana':
+            # ひらがな
+            alph = HIRAGANA
+        elif lang == 'katakana':
+            # カタカナ
+            alph = KATAKANA
+        else:
+            # アルファベット
+            alph = ALPHABET
+
+        # アルファベットボタンの作成
+        # [[あ, い, ...], ...] -> [[ボタン(あ), ボタン(い), ...], ...]
+        self.buttons = [[tk.Button(self, text=e[0], font=('fammily', 15), command=self.push_kana(e), width=3)
+                        for e in line] for line in alph]
+
         # 変換ボタン
-        self.hb = tk.Button(self, text='変換', width=10, command=self.henkan)
+        hb = tk.Button(self, text='変換', command=self.henkan)
         # 1文字クリアボタン
-        self.cb = tk.Button(self, text='1字消去', width=10, command=self.clear_char)
+        cb = tk.Button(self, text='1字消去', command=self.clear_char)
         # 提出ボタン
-        self.sb = tk.Button(self, text='決定', width=20, command=submit_func)
+        sb = tk.Button(self, text='決定', command=submit_func)
 
         #
         # ウィジェットの配置
         #
 
+        if lang == 'hiragana' or lang == 'katakana':
+            # ひらがな・カタカナの場合
+            for col_idx, line in enumerate(self.buttons):
+                for row_idx, b in enumerate(line):
+                    if col_idx != 7:
+                        # や行以外の配置
+                        b.grid(row=row_idx+1, column=9-col_idx, sticky=tk.N + tk.E + tk.S + tk.W)
+                    else:
+                        # や行の配置
+                        b.grid(row=row_idx*2+1, column=2, sticky=tk.N + tk.E + tk.S + tk.W)
+        else:
+            # アルファベットの場合
+            for row_idx, line in enumerate(self.buttons):
+                for col_idx, b in enumerate(line):
+                    b.grid(row=row_idx+1, column=col_idx, sticky=tk.N + tk.E + tk.S + tk.W)
+
+        # 入力表示ラベルと枠の配置
         labelframe.grid(row=0, column=0, columnspan=10)
         self.label.pack()
 
-        for i, b in enumerate(self.buttons):
-            if i < 35:
-                # ま行までの配置
-                b.grid(row=i%5+1, column=9-i//5)
-            elif i < 38:
-                # や行の配置
-                b.grid(row=(2*i)%5+1, column=2)
-            else:
-                # ら行以降の配置
-                b.grid(row=(i+2)%5+1, column=9-(i+2)//5)
-
-        self.hb.grid(row=6, column=1, columnspan=2)
-        self.cb.grid(row=6, column=7, columnspan=2)
-        self.sb.grid(row=6, column=3, columnspan=4)
+        # 変換・1字クリア・提出ボタンの配置
+        hb.grid(row=6, column=1, columnspan=2, sticky=tk.N + tk.E + tk.S + tk.W)
+        cb.grid(row=6, column=7, columnspan=2, sticky=tk.N + tk.E + tk.S + tk.W)
+        sb.grid(row=6, column=3, columnspan=4, sticky=tk.N + tk.E + tk.S + tk.W)
 
     def clear_label(self):
         """全消し"""
         self.txt.set('')
+        self.inputted = []
 
     def clear_char(self):
         """末尾の1文字を消す"""
         if self.txt.get() != '':
             self.txt.set(self.txt.get()[:-1])
+            del self.inputted[-1]
 
-    def push_kana(self, kana):
+    def push_kana(self, kana_set):
         """かな入力 commandに引数付きで渡すために関数をネスト"""
         def x():
             if len(self.txt.get()) < TXT_MAX:
-                self.txt.set(self.txt.get() + kana)
+                self.txt.set(self.txt.get() + kana_set[0])
+                self.inputted.append(kana_set)
         return x
 
     def henkan(self):
         """変換ボタン 拗音化・濁音半濁音への変換"""
         if self.txt.get() != '':
             # 末尾の文字を取得
-            last_kana = self.txt.get()[-1]
+            last_c = self.txt.get()[-1]
+
+            # 末尾の文字の, 変換を含めたセット(String列)
+            last_set = self.inputted[-1]
+
+            # 末尾の文字の変換後の文字
+            next_c = last_set[(last_set.index(last_c)+1) % len(last_set)]
+
             # 末尾までの文字の取得
-            b_last_kanas = self.txt.get()[:-1]
-            for i in KANA:
-                # 50音表から入力文字を検索し変換したものに末尾を置き換える
-                if last_kana in i:
-                    new_txt = b_last_kanas+i[(i.find(last_kana)+1)%len(i)]
-                    self.txt.set(new_txt)
+            before_last = self.txt.get()[:-1]
+
+            # 入力文字を検索し変換次の文字に変換したものに末尾を置き換える
+            self.txt.set(before_last + next_c)
